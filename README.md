@@ -3,8 +3,11 @@
 This repository contains the implementation of our transfer learning-based intrusion detection approach described in our paper:
 
 Paper Title: Deep Transfer Learning for Intrusion Detection in Edge Computing Scenarios
+
 Authors: Zeeshan Ali, Walter Tiberti, Andrea Marotta and Dajana Cassioli
+
 Journal: IEEE Internet of Things Journal
+
 DOI: 10.1109/JIOT.2025.3597892
 
 Overview: This work proposes a deep transfer learning approach for intrusion detection in edge computing environments.
