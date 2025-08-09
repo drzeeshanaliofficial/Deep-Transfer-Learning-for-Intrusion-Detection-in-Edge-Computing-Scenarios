@@ -1,4 +1,4 @@
-Deep Transfer Learning for Intrusion Detection in Edge Computing Scenarios
+**Deep Transfer Learning for Intrusion Detection in Edge Computing Scenarios**
 
 This repository contains the implementation of our transfer learning-based intrusion detection approach described in our paper:
 
