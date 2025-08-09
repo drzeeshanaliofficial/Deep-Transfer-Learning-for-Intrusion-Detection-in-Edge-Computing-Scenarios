@@ -14,7 +14,9 @@ Overview: This work proposes a deep transfer learning approach for intrusion det
 We leverage Google BERT models (BERT-Base and BERT-Large) as feature extractors and train a Multi-Layer Perceptron (MLP) for the creation of a Supermodel using Deep Transfer Learning.
 
 Our model is evaluated on two widely used intrusion detection datasets: 
+
 NSL-KDD 2009 (Link: https://www.unb.ca/cic/datasets/nsl.html)
+
 CIC-IDS 2017 (Link: https://www.unb.ca/cic/datasets/ids-2017.html)
 
 This repository contains: BERT-Base and BERT-Large implementations. Each implementation is in its folder with all relevant Python files.
