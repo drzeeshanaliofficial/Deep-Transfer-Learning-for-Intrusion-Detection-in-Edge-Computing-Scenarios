@@ -6,7 +6,7 @@ Paper Title: Deep Transfer Learning for Intrusion Detection in Edge Computing Sc
 
 Authors: Zeeshan Ali, Walter Tiberti, Andrea Marotta and Dajana Cassioli
 
-Journal: IEEE Internet of Things Journal
+Journal: IEEE Internet of Things
 
 DOI: 10.1109/JIOT.2025.3597892
 
@@ -19,7 +19,7 @@ CIC-IDS 2017 (Link: https://www.unb.ca/cic/datasets/ids-2017.html)
 
 This repository contains: BERT-Base and BERT-Large implementations. Each implementation is in its folder with all relevant Python files.
 
-If you use this repository in your research, please cite our paper:
+**If you use this repository in your research, please cite our paper:**
 
 @article{TLzeeshanali,
   author    = {Zeeshan Ali, Walter Tiberti, Andrea Marotta, Dajana Cassioli},
