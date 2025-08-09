@@ -1,0 +1,425 @@
+from google.colab import drive
+import pandas as pd
+import numpy as np
+
+drive.mount('/content/drive')
+
+path = "/content/drive/My Drive/"
+
+import time
+import torch     
+import torch.nn as nn              
+import pandas as pd         
+import numpy as np
+import matplotlib.pyplot as plt
+import psutil
+import subprocess
+import ipywidgets as widgets
+from IPython.display import display
+from IPython.display import Markdown
+import gc
+gc.collect()
+!pip install transformers
+!pip install pandas
+!pip install torch
+!pip install tqdm
+from transformers import BertModel, BertTokenizer    
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
+from sklearn.model_selection import train_test_split 
+from tqdm import tqdm
+from tqdm.notebook import tqdm
+from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix, ConfusionMatrixDisplay
+
+train_url = 'https://raw.githubusercontent.com/merteroglu/NSL-KDD-Network-Instrusion-Detection/master/NSL_KDD_Train.csv'
+test_url = 'https://raw.githubusercontent.com/merteroglu/NSL-KDD-Network-Instrusion-Detection/master/NSL_KDD_Test.csv'
+
+col_names = ["duration","protocol_type","service","flag","src_bytes",
+    "dst_bytes","land","wrong_fragment","urgent","hot","num_failed_logins",
+    "logged_in","num_compromised","root_shell","su_attempted","num_root",
+    "num_file_creations","num_shells","num_access_files","num_outbound_cmds",
+    "is_host_login","is_guest_login","count","srv_count","serror_rate",
+    "srv_serror_rate","rerror_rate","srv_rerror_rate","same_srv_rate",
+    "diff_srv_rate","srv_diff_host_rate","dst_host_count","dst_host_srv_count",
+    "dst_host_same_srv_rate","dst_host_diff_srv_rate","dst_host_same_src_port_rate",
+    "dst_host_srv_diff_host_rate","dst_host_serror_rate","dst_host_srv_serror_rate",
+    "dst_host_rerror_rate","dst_host_srv_rerror_rate","label"]
+
+
+df_train = pd.read_csv(train_url,header=None, names = col_names)
+
+df_test = pd.read_csv(test_url, header=None, names = col_names)
+
+
+df_train_label = df_train['label']
+df_test_label = df_test['label']
+
+df_train_label = df_train_label.replace({ 'normal' : 0, 'neptune' : 1 ,'back': 1, 'land': 1, 'pod': 1, 'smurf': 1, 'teardrop': 1,'mailbomb': 1, 'apache2': 1, 'processtable': 1, 'udpstorm': 1, 'worm': 1,
+                           'ipsweep' : 2,'nmap' : 2,'portsweep' : 2,'satan' : 2,'mscan' : 2,'saint' : 2
+                           ,'ftp_write': 3,'guess_passwd': 3,'imap': 3,'multihop': 3,'phf': 3,'spy': 3,'warezclient': 3,'warezmaster': 3,'sendmail': 3,'named': 3,'snmpgetattack': 3,'snmpguess': 3,'xlock': 3,'xsnoop': 3,'httptunnel': 3,
+                           'buffer_overflow': 4,'loadmodule': 4,'perl': 4,'rootkit': 4,'ps': 4,'sqlattack': 4,'xterm': 4})
+
+df_test_label = df_test_label.replace({ 'normal' : 0, 'neptune' : 1 ,'back': 1, 'land': 1, 'pod': 1, 'smurf': 1, 'teardrop': 1,'mailbomb': 1, 'apache2': 1, 'processtable': 1, 'udpstorm': 1, 'worm': 1,
+                           'ipsweep' : 2,'nmap' : 2,'portsweep' : 2,'satan' : 2,'mscan' : 2,'saint' : 2
+                           ,'ftp_write': 3,'guess_passwd': 3,'imap': 3,'multihop': 3,'phf': 3,'spy': 3,'warezclient': 3,'warezmaster': 3,'sendmail': 3,'named': 3,'snmpgetattack': 3,'snmpguess': 3,'xlock': 3,'xsnoop': 3,'httptunnel': 3,
+                           'buffer_overflow': 4,'loadmodule': 4,'perl': 4,'rootkit': 4,'ps': 4,'sqlattack': 4,'xterm': 4})
+
+df_train['label'] = df_train_label
+df_test['label'] = df_test_label
+
+label_mapping = {
+    0: 'BENIGN',
+    1: 'DoS',
+    2: 'Probe',
+    3: 'R2L',
+    4: 'U2R'
+}
+
+df_train_label = df_train_label.replace(label_mapping)
+df_test_label = df_test_label.replace(label_mapping)
+
+df_train['label'] = df_train_label
+df_test['label'] = df_test_label
+
+Normal_Samples_Train = df_train[df_train['label'] == 'BENIGN']['label'].count()
+print("Normal labels/samples with value 0 in train dataset:", Normal_Samples_Train)
+DoS_Samples_Train = df_train[df_train['label'] == 'DoS']['label'].count()
+print("DoS labels/samples with value 1 in train dataset:", DoS_Samples_Train)
+Probe_Samples_Train = df_train[df_train['label'] == 'Probe']['label'].count()
+print("Probe labels/samples with value 2 in train dataset:", Probe_Samples_Train)
+R2L_Samples_Train = df_train[df_train['label'] == 'R2L']['label'].count()
+print("R2L labels/samples with value 3 in train dataset:", R2L_Samples_Train)
+U2R_Samples_Train = df_train[df_train['label'] == 'U2R']['label'].count()
+print("U2R labels/samples with value 4 in train dataset:", U2R_Samples_Train)
+print("---------------------------------------------------------")
+Normal_Samples_Test = df_test[df_test['label'] == 'BENIGN']['label'].count()
+print("Normal labels/samples with value 0 in test dataset:", Normal_Samples_Test)
+DoS_Samples_Test = df_test[df_test['label'] == 'DoS']['label'].count()
+print("DoS labels/samples with value 1 in test dataset:", DoS_Samples_Test)
+Probe_Samples_Test = df_test[df_test['label'] == 'Probe']['label'].count()
+print("Probe labels/samples with value 2 in test dataset:", Probe_Samples_Test)
+R2L_Samples_Test = df_test[df_test['label'] == 'R2L']['label'].count()
+print("R2L labels/samples with value 3 in test dataset:", R2L_Samples_Test)
+U2R_Samples_Test = df_test[df_test['label'] == 'U2R']['label'].count()
+print("U2R labels/samples with value 4 in test dataset:", U2R_Samples_Test)
+
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+X_train = df_train.drop('label', axis=1)
+y_train = df_train['label']
+X_test = df_test.drop('label', axis=1)
+y_test = df_test['label']
+
+train_data = pd.concat([X_train, y_train], axis=1)
+
+test_data = pd.concat([X_test, y_test], axis=1)
+combined_data = pd.concat([train_data, test_data], axis=0)
+X_combined = combined_data.drop(columns=['label']) 
+y_combined = combined_data['label']
+
+sampling_strategy_over = {
+    "R2L": 8000,    
+    "U2R": 5000,    
+}
+
+over_sampler = RandomOverSampler(sampling_strategy=sampling_strategy_over)
+oversampling_pipeline = Pipeline([
+    ('over_sampling', over_sampler)
+])
+
+X_combined_resampled, y_combined_resampled = oversampling_pipeline.fit_resample(X_combined, y_combined)
+
+X_train, X_test, y_train, y_test = train_test_split(X_combined_resampled, y_combined_resampled, test_size=0.2, random_state=42, stratify=y_combined_resampled)
+
+#Train Set
+
+from transformers import BertTokenizer, TFBertModel
+import tensorflow as tf
+import numpy as np
+from tqdm import tqdm
+
+flow_text_train = X_train.apply(lambda x: ' '.join(map(str, x)), axis=1)
+
+print("Number of Rows in flow_text_train:", len(flow_text_train))
+
+X_train_tokenized = []
+print("\nTokenizing the Training Set:")
+tokenizer = BertTokenizer.from_pretrained('bert-large-uncased')
+for text in tqdm(flow_text_train):
+    tokenized_text = tokenizer.encode_plus(
+        text,
+        truncation=True,
+        padding='max_length',
+        max_length=128,
+        return_attention_mask=True,
+        return_tensors='tf'
+    )
+    X_train_tokenized.append(tokenized_text)
+
+X_train_input_ids = tf.squeeze(tf.stack([t['input_ids'] for t in X_train_tokenized]), axis=1)
+X_train_attention_mask = tf.squeeze(tf.stack([t['attention_mask'] for t in X_train_tokenized]), axis=1)
+
+print("Extracting Features from the Training Set:")
+bert_model = TFBertModel.from_pretrained('bert-large-uncased')
+X_train_features = []
+for i in tqdm(range(0, len(X_train_input_ids), 100)):
+    batch_input_ids = X_train_input_ids[i:i+100]
+    batch_attention_mask = X_train_attention_mask[i:i+100]
+    features = bert_model([batch_input_ids, batch_attention_mask])[0][:, 0, :].numpy()
+    X_train_features.append(features)
+X_train_features = np.concatenate(X_train_features, axis=0)
+print("Train features shape:", X_train_features.shape)
+
+np.save(path +'nslkdd_train_features_BERT_Large.npy', X_train_features)
+
+#Test Set
+
+from transformers import BertTokenizer, TFBertModel
+import tensorflow as tf
+import numpy as np
+from tqdm import tqdm
+
+flow_text_test = X_test.apply(lambda x: ' '.join(map(str, x)), axis=1)
+
+print("Number of Rows in flow_text_test:", len(flow_text_test))
+
+X_test_tokenized = []
+print("\nTokenizing the Testing Set:")
+tokenizer = BertTokenizer.from_pretrained('bert-large-uncased')
+for text in tqdm(flow_text_test):
+    tokenized_text = tokenizer.encode_plus(
+        text,
+        truncation=True,
+        padding='max_length',
+        max_length=128,
+        return_attention_mask=True,
+        return_tensors='tf'
+    )
+    X_test_tokenized.append(tokenized_text)
+
+X_test_input_ids = tf.squeeze(tf.stack([t['input_ids'] for t in X_test_tokenized]), axis=1)
+X_test_attention_mask = tf.squeeze(tf.stack([t['attention_mask'] for t in X_test_tokenized]), axis=1)
+
+print("Extracting Features from the Testing Set:")
+bert_model = TFBertModel.from_pretrained('bert-large-uncased')
+X_test_features = []
+for i in tqdm(range(0, len(X_test_input_ids), 100)):
+    batch_input_ids = X_test_input_ids[i:i+100]
+    batch_attention_mask = X_test_attention_mask[i:i+100]
+    features = bert_model([batch_input_ids, batch_attention_mask])[0][:, 0, :].numpy()
+    X_test_features.append(features)
+X_test_features = np.concatenate(X_test_features, axis=0)
+print("Test features shape:", X_test_features.shape)
+
+np.save(path +'nslkdd_test_features_BERT_Large.npy', X_test_features)
+
+unique_labels = y_test.unique()
+print(unique_labels)
+
+import numpy as np
+import tensorflow as tf
+from sklearn.metrics import accuracy_score, classification_report
+import joblib
+
+def add_classification_head(base_model, num_classes, dropout_rate=0.5):
+    model = tf.keras.models.Sequential([
+        base_model,
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(dropout_rate),
+        tf.keras.layers.Dense(num_classes, activation='softmax', kernel_regularizer=tf.keras.regularizers.l2(0.01))
+    ])
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+                  loss='sparse_categorical_crossentropy',
+                  metrics=['accuracy'])
+    return model
+
+base_model = tf.keras.models.load_model(path+'cicids_base_model.h5')
+
+num_layers_to_unfreeze = 5
+for layer in base_model.layers[-num_layers_to_unfreeze:]:
+    layer.trainable = True
+
+lookup_config = joblib.load(path+'lookup_config.pkl')
+lookup_weights = joblib.load(path+'lookup_weights.pkl')
+lookup_layer = tf.keras.layers.StringLookup.from_config(lookup_config)
+lookup_layer.set_weights(lookup_weights)
+
+train_features_2 = np.load(path+'nslkdd_train_features_BERT_Large.npy')
+train_labels_2 = y_train
+test_features_2 = np.load(path+'nslkdd_test_features_BERT_Large.npy')
+test_labels_2 = y_test
+
+train_features_original = np.load(path+'cicids_train_features_BERT_Base.npy')
+train_labels_original = np.load(path+'cicids_train_labels.npy', allow_pickle=True)
+
+sample_size = int(0.20 * len(train_features_original))
+indices = np.random.choice(len(train_features_original), sample_size, replace=False)
+
+train_features_replay = train_features_original[indices]
+train_labels_replay = train_labels_original[indices]
+
+train_features_combined = np.concatenate([train_features_2, train_features_replay])
+train_labels_combined = np.concatenate([train_labels_2, train_labels_replay])
+
+scaler = joblib.load(path+'cicids_scaler.pkl')
+train_features_combined = scaler.transform(train_features_combined)
+test_features_2 = scaler.transform(test_features_2)
+
+original_vocabulary = lookup_layer.get_vocabulary()
+new_vocabulary = np.unique(train_labels_combined)
+combined_vocabulary = np.unique(np.concatenate([original_vocabulary, new_vocabulary]))
+
+lookup_layer.set_vocabulary(combined_vocabulary)
+
+train_labels_encoded_combined = lookup_layer(train_labels_combined).numpy()
+test_labels_encoded_2 = lookup_layer(test_labels_2).numpy()
+
+num_classes_combined = len(lookup_layer.get_vocabulary())
+model_2 = add_classification_head(base_model, num_classes_combined)
+
+early_stopping = tf.keras.callbacks.EarlyStopping(patience=5, restore_best_weights=True)
+
+def scheduler(epoch, lr):
+    if epoch < 10:
+        return lr
+    else:
+        return lr * 0.9
+
+lr_callback = tf.keras.callbacks.LearningRateScheduler(scheduler)
+
+model_2.fit(train_features_combined,
+            train_labels_encoded_combined,
+            epochs=20,
+            batch_size=32,
+            validation_split=0.1,
+            callbacks=[early_stopping, lr_callback])
+
+predictions_2 = np.argmax(model_2.predict(test_features_2), axis=1)
+decoded_predictions_2 = [lookup_layer.get_vocabulary()[pred] for pred in predictions_2]
+accuracy_2 = accuracy_score(test_labels_2, decoded_predictions_2)
+print("Second Dataset Accuracy:", accuracy_2)
+report_2 = classification_report(test_labels_2, decoded_predictions_2)
+print(report_2)
+
+model_2.save(path + "meta_model.h5", overwrite=True)
+
+lookup_config_updated = lookup_layer.get_config()
+lookup_weights_updated = lookup_layer.get_weights()
+
+joblib.dump(lookup_config_updated, path+'lookup_config_updated.pkl')
+joblib.dump(lookup_weights_updated, path+'lookup_weights_updated.pkl')
+
+labels_in_lookup = lookup_layer.get_vocabulary()
+print(labels_in_lookup)
+
+total_labels = len(lookup_layer.get_vocabulary())
+print("Total number of labels in the lookup_layer:", total_labels)
+
+import numpy as np
+import tensorflow as tf
+from sklearn.metrics import accuracy_score, classification_report
+import joblib
+
+loaded_meta_model = tf.keras.models.load_model(path+'meta_model.h5')
+
+test_features_2 = np.load(path+'nslkdd_test_features_BERT_Large.npy')
+test_labels_2 = y_test
+
+scaler = joblib.load(path+'cicids_scaler.pkl')
+test_features_2 = scaler.transform(test_features_2)
+
+lookup_config_updated = joblib.load(path+'lookup_config_updated.pkl')
+lookup_weights_updated = joblib.load(path+'lookup_weights_updated.pkl')
+lookup_layer = tf.keras.layers.StringLookup.from_config(lookup_config_updated)
+lookup_layer.set_weights(lookup_weights_updated)
+
+predictions_loaded = np.argmax(loaded_meta_model.predict(test_features_2), axis=1)
+decoded_predictions_loaded = [lookup_layer.get_vocabulary()[pred] for pred in predictions_loaded]
+
+accuracy_loaded = accuracy_score(test_labels_2, decoded_predictions_loaded)
+print("Loaded Model - Second Dataset Accuracy:", accuracy_loaded)
+
+report_loaded = classification_report(test_labels_2, decoded_predictions_loaded)
+print(report_loaded)
+
+import numpy as np
+import tensorflow as tf
+from sklearn.metrics import accuracy_score, classification_report, precision_score, recall_score, f1_score
+import joblib
+
+accuracy_loaded = accuracy_score(test_labels_2, decoded_predictions_loaded)
+print("Loaded Model - Second Dataset Accuracy:", accuracy_loaded)
+
+report_loaded = classification_report(test_labels_2, decoded_predictions_loaded)
+print(report_loaded)
+
+precision_loaded = precision_score(test_labels_2, decoded_predictions_loaded, average='weighted')
+recall_loaded = recall_score(test_labels_2, decoded_predictions_loaded, average='weighted')
+f1_loaded = f1_score(test_labels_2, decoded_predictions_loaded, average='weighted')
+
+print("Overall Precision:", precision_loaded)
+print("Overall Recall:", recall_loaded)
+print("Overall F1 Score:", f1_loaded)
+
+import numpy as np
+import tensorflow as tf
+from sklearn.metrics import accuracy_score, classification_report
+import joblib
+
+loaded_meta_model = tf.keras.models.load_model(path+'meta_model.h5')
+
+test_features_2 = np.load(path+'nslkdd_test_features_BERT_Large.npy')
+
+test_labels_2 = y_test
+
+scaler = joblib.load(path+'cicids_scaler.pkl')
+test_features_2 = scaler.transform(test_features_2)
+
+lookup_config_updated = joblib.load(path+'lookup_config_updated.pkl')
+lookup_weights_updated = joblib.load(path+'lookup_weights_updated.pkl')
+lookup_layer = tf.keras.layers.StringLookup.from_config(lookup_config_updated)
+lookup_layer.set_weights(lookup_weights_updated)
+
+predictions_loaded = np.argmax(loaded_meta_model.predict(test_features_2), axis=1)
+decoded_predictions_loaded = [lookup_layer.get_vocabulary()[pred] for pred in predictions_loaded]
+
+accuracy_loaded = accuracy_score(test_labels_2, decoded_predictions_loaded)
+print("Loaded Model - Second Dataset Accuracy:", accuracy_loaded)
+
+unique_attack_labels = np.unique(test_labels_2)
+
+for label in unique_attack_labels:
+    mask = test_labels_2 == label
+    accuracy = accuracy_score(test_labels_2[mask], np.array(decoded_predictions_loaded)[mask])
+    print(f"Accuracy for Attack Label '{label}': {accuracy}")
+
+
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+import numpy as np
+
+cm_loaded = confusion_matrix(test_labels_2, decoded_predictions_loaded)
+
+
+cm_loaded_percent = cm_loaded.astype('float') / cm_loaded.sum(axis=1)[:, np.newaxis]
+
+class_labels = np.unique(test_labels_2)
+
+
+plt.figure(figsize=(8, 5)) 
+sns.heatmap(cm_loaded_percent, annot=True, cmap='Blues', fmt='.2%')
+
+tick_labels = [f"{class_labels[i]} ({i})" for i in range(len(class_labels))]
+plt.xticks(np.arange(len(class_labels)) + 0.5, tick_labels, rotation=45, ha='right')
+plt.yticks(np.arange(len(class_labels)) + 0.5, tick_labels, rotation=0)
+
+plt.xlabel('Predicted Labels')
+plt.ylabel('True Labels')
+
+plt.savefig(path + "confusion_matrix.pdf", format="pdf", bbox_inches='tight')
+
+plt.show()
+
